@@ -1,10 +1,6 @@
 pipeline {
     agent any
 
-    tools {
-        nodejs 'Node18'
-    }
-
     stages {
 
         stage('Checkout') {
@@ -17,16 +13,16 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 echo 'Installing npm packages'
-                sh 'node --version'
-                sh 'npm --version'
-                sh 'npm install'
+                sh '/usr/bin/node --version'
+                sh '/usr/bin/npm --version'
+                sh '/usr/bin/npm install'
             }
         }
 
         stage('Test') {
             steps {
                 echo 'Running tests'
-                sh 'npm test || true'
+                sh '/usr/bin/npm test || true'
             }
         }
 
@@ -44,4 +40,3 @@ pipeline {
         }
     }
 }
-
