@@ -2,8 +2,9 @@ const express = require('express');
 const app = express();
 
 app.get('/', (req, res) => {
-  res.send('Hello from Jenkins CI Pipeline 🚀');
+  res.send('Hello from Jenkins CI Pipeline with poll SCM');
 });
+
 
 const PORT = 3000;
 app.listen(PORT, () => {
