@@ -1,42 +1,51 @@
 pipeline {
     agent any
 
+    environment {
+        IMAGE_NAME = "mahi8081/node-jenkins-app"
+        IMAGE_TAG = "latest"
+    }
+
     stages {
 
         stage('Checkout') {
             steps {
-                echo 'Pulling code from GitHub'
                 checkout scm
             }
         }
 
         stage('Install Dependencies') {
             steps {
-                echo 'Installing npm packages'
-                sh '/usr/bin/node --version'
-                sh '/usr/bin/npm --version'
-                sh '/usr/bin/npm install'
+                sh 'npm install'
             }
         }
 
         stage('Test') {
             steps {
-                echo 'Running tests'
-                sh '/usr/bin/npm test || true'
+                sh 'npm test || echo "No tests found"'
             }
         }
 
-        stage('Build') {
+        stage('Docker Build') {
             steps {
-                echo 'Preparing build artifacts'
-                sh 'mkdir -p build && cp index.js package.json build/'
+                sh 'docker build -t $IMAGE_NAME:$IMAGE_TAG .'
             }
         }
 
-        stage('Archive') {
+        stage('Docker Push') {
             steps {
-                archiveArtifacts artifacts: 'build/**'
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh '''
+                      docker login -u $DOCKER_USER -p $DOCKER_PASS
+                      docker push $IMAGE_NAME:$IMAGE_TAG
+                    '''
+                }
             }
         }
     }
 }
+
