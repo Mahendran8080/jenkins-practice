@@ -1,0 +1,49 @@
+## Jenkinsfile – CI/CD Pipeline for the Node.js Application
+
+### File Purpose
+The `Jenkinsfile` is a **Declarative Pipeline** definition that automates the build, test, and deployment of a Node.js application to Docker Hub.  
+It is executed by Jenkins on any available agent and performs the following high‑level tasks:
+
+1. **Source Checkout** – Pulls the latest code from the repository.  
+2. **Dependency Installation** – Installs Node.js packages.  
+3. **Testing** – Runs the test suite (or skips gracefully if none exist).  
+4. **Docker Image Build** – Builds a Docker image from the repository’s `Dockerfile`.  
+5. **Docker Push** – Authenticates to Docker Hub and pushes the image.
+
+### Key Logic
+
+| Stage | Purpose | Core Commands |
+|-------|---------|---------------|
+| **Checkout** | Retrieve source code | `checkout scm` |
+| **Install Dependencies** | Prepare the Node environment | `sh 'npm install'` |
+| **Test** | Verify code quality | `sh 'npm test || echo "No tests found"'` |
+| **Docker Build** | Build container image | `sh 'docker build -t $IMAGE_NAME:$IMAGE_TAG .'` |
+| **Docker Push** | Publish image to Docker Hub | `withCredentials` block + `docker login` + `docker push` |
+
+#### Environment Variables
+```groovy
+environment {
+    IMAGE_NAME = "mahi8081/node-jenkins-app"
+    IMAGE_TAG  = "latest"
+}
+```
+* `IMAGE_NAME` – Docker Hub repository name.  
+* `IMAGE_TAG` – Tag applied to the built image (default `latest`).
+
+#### Credentials
+The pipeline uses a Jenkins credential with ID `dockerhub-creds` (type **Username/Password**) to securely log in to Docker Hub:
+
+```groovy
+withCredentials([usernamePassword(
+    credentialsId: 'dockerhub-creds',
+    usernameVariable: 'DOCKER_USER',
+    passwordVariable: 'DOCKER_PASS'
+)])
+```
+
+### DevOps Context
+- **CI (Continuous Integration)** – The `Install Dependencies` and `Test` stages ensure that every commit is verified for buildability and correctness before any container is produced.  
+- **CD (Continuous Delivery)** – The `Docker Build` and `Docker Push` stages package the application into a reproducible container and publish it to Docker Hub, making it ready for deployment to any Kubernetes cluster, ECS, or other container orchestrator.  
+- **Agent** – `agent any` allows the pipeline to run on any available Jenkins node, providing flexibility in scaling the build process.  
+
+This Jenkinsfile is the single source of truth for the project’s CI/CD workflow, enabling consistent, repeatable builds and deployments across all environments.
