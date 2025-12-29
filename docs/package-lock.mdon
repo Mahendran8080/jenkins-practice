@@ -1,0 +1,127 @@
+# `package-lock.json`
+
+| Item | Description |
+|------|-------------|
+| **File** | `package-lock.json` |
+| **Location** | Root of the repository |
+| **Purpose** | Records the exact dependency tree that was installed for the project, ensuring deterministic builds. |
+
+---
+
+## 1. File Purpose
+
+`package-lock.json` is an automatically generated file created by **npm** (Node Package Manager) when you run `npm install`. It locks every package and sub‑package to a specific version, checksum, and source URL. This guarantees that anyone who checks out the repository and runs `npm ci` will end up with **exactly the same dependency graph** as the original developer, regardless of new releases or changes in the `package.json` file.
+
+Key benefits:
+
+- **Reproducibility** – Builds are identical across environments (local dev, CI, Docker, etc.).
+- **Security** – The integrity hashes allow npm to detect tampering.
+- **Performance** – `npm ci` uses the lock file to install faster and with fewer network round‑trips.
+
+---
+
+## 2. Key Logic & Structure
+
+The file is a JSON document with the following top‑level keys:
+
+| Key | Meaning |
+|-----|---------|
+| `name` | Project name (`jenkins-ci`). |
+| `version` | Project version (`1.0.0`). |
+| `lockfileVersion` | npm lockfile format version (currently `3`). |
+| `requires` | Boolean indicating that the lockfile is required. |
+| `packages` | **The heart of the file** – a map of every package (including the root) and its metadata. |
+
+### 2.1 Root Package (`""`)
+
+```json
+{
+  "name": "jenkins-ci",
+  "version": "1.0.0",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
+```
+
+- Declares the project itself and its direct dependency on **Express 5.x**.
+
+### 2.2 Individual Packages
+
+Each entry under `node_modules/<package>` contains:
+
+- `version`: The exact version that was installed.
+- `resolved`: The URL of the tarball on the npm registry.
+- `integrity`: SHA‑512 hash for integrity verification.
+- `license`: SPDX license identifier.
+- `dependencies`: Nested dependencies required by that package.
+- `engines`: Node version constraints.
+- `funding`: Optional funding information (e.g., OpenCollective links).
+
+Example – `express`:
+
+```json
+"node_modules/express": {
+  "version": "5.2.1",
+  "resolved": "...",
+  "license": "MIT",
+  "dependencies": {
+    "accepts": "^2.0.0",
+    "body-parser": "^2.2.1",
+    ...
+  },
+  "engines": { "node": ">=18" }
+}
+```
+
+The lock file also includes **transitive dependencies** (e.g., `mime-types`, `debug`, `qs`, etc.) with their own sub‑dependencies, forming a complete dependency graph.
+
+### 2.3 Important Sub‑Fields
+
+- **`integrity`** – Allows npm to verify that the downloaded package matches the expected hash.
+- **`engines`** – Specifies the Node.js version range that the package supports.
+- **`funding`** – Optional metadata for open‑source funding; not required for build logic.
+
+---
+
+## 3. DevOps Context
+
+### 3.1 CI/CD Integration
+
+In a typical **Jenkins** or **GitHub Actions** pipeline, the lock file is used as follows:
+
+1. **Checkout** – The repository is cloned.
+2. **Install Dependencies** – `npm ci` is executed.  
+   - `npm ci` reads `package-lock.json` to install the exact versions, skipping the `package.json` resolution step.
+3. **Build / Test** – The application is built or tests are run against the locked dependencies.
+4. **Docker Build** – If a Docker image is built, the Dockerfile usually contains `COPY package-lock.json .` followed by `RUN npm ci --production` to ensure the image contains the same dependency tree.
+
+### 3.2 Security & Auditing
+
+- **npm audit** can be run against the lock file to identify known vulnerabilities in any of the locked packages.
+- The `integrity` hashes help detect tampering or corrupted packages during the install step.
+
+### 3.3 Updating Dependencies
+
+- To bump a dependency, run `npm update <pkg>` or edit `package.json` and then `npm install`.  
+- After changes, commit the updated `package-lock.json` to keep the lock file in sync.
+- In CI, a failing build may indicate that a lock file was not updated after a dependency change.
+
+---
+
+## 4. Practical Tips
+
+| Scenario | Recommendation |
+|----------|----------------|
+| **Adding a new dependency** | `npm install <pkg> --save` → commit both `package.json` and `package-lock.json`. |
+| **Removing a dependency** | `npm uninstall <pkg>` → commit the updated lock file. |
+| **Re‑generating the lock file** | `rm -rf node_modules package-lock.json && npm ci` (or `npm install`). |
+| **Running tests in CI** | Use `npm ci` instead of `npm install` for speed and determinism. |
+| **Dockerfile** | `COPY package-lock.json .` then `RUN npm ci --production`. |
+
+---
+
+## 5. Summary
+
+`package-lock.json` is a critical artifact for any Node.js project. It guarantees that every developer, CI runner, and production environment uses the same dependency versions, thereby eliminating “works on my machine” surprises. In a DevOps pipeline, it is the single source of truth for package resolution and is essential for reproducible builds, security scanning, and efficient Docker image creation.
