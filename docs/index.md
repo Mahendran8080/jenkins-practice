@@ -1,76 +1,62 @@
 ## `index.js`
 
-### Purpose
-`index.js` is a minimal Express.js application that serves as a **demo endpoint** for a Jenkins CI pipeline that uses *poll SCM* to trigger builds.  
-When the pipeline runs, this file starts a web server on port **3000** and responds to the root URL (`/`) with a friendly greeting:
+### File Purpose
+`index.js` is the entry point for a minimal **Node.js + Express** web application.  
+It exposes a single HTTP GET endpoint (`/`) that returns a plain‑text greeting.  
+The server listens on port **3000** and logs a startup message to the console.
 
-```
-Hello from Jenkins CI Pipeline with poll SCM
-```
-
-This simple server is useful for:
-
-- Verifying that the CI pipeline has successfully deployed the application.
-- Providing a quick health‑check endpoint that can be polled by Jenkins or other monitoring tools.
+This file is typically used in the repository’s CI/CD pipeline (e.g., a Jenkins job) to verify that the application builds correctly and that the basic HTTP endpoint is reachable after deployment.
 
 ---
 
-### Main Functions & Logic
+### Key Logic
 
 | Section | Description |
 |---------|-------------|
-| `const express = require('express');` | Imports the Express framework. |
-| `const app = express();` | Creates an Express application instance. |
-| `app.get('/', (req, res) => { ... });` | Registers a GET route for the root path. When a request is received, it sends a plain‑text response. |
-| `const PORT = 3000;` | Defines the port on which the server will listen. |
-| `app.listen(PORT, () => { ... });` | Starts the HTTP server and logs a message once it’s ready. |
-
-The logic is intentionally straightforward: start a server, expose a single route, and log the listening port. This keeps the file lightweight and easy to understand for CI/CD demonstrations.
-
----
-
-### Usage Example
-
-1. **Install dependencies** (if not already done):
-
-   ```bash
-   npm install express
-   ```
-
-2. **Run the server**:
-
-   ```bash
-   node index.js
-   ```
-
-   You should see:
-
-   ```
-   Server running on port 3000
-   ```
-
-3. **Access the endpoint**:
-
-   ```bash
-   curl http://localhost:3000
-   ```
-
-   Response:
-
-   ```
-   Hello from Jenkins CI Pipeline with poll SCM
-   ```
-
-> **Tip:** In a Jenkins pipeline, you can use `curl` or a browser to confirm that the build has deployed the application correctly.
+| **Imports** | `const express = require('express');` pulls in the Express framework. |
+| **App Instantiation** | `const app = express();` creates an Express application instance. |
+| **Route Definition** | ```js
+app.get('/', (req, res) => {
+  res.send('Hello from Jenkins CI Pipeline with poll SCM');
+});
+``` <br>Defines a single route that responds with a static string. |
+| **Server Startup** | ```js
+const PORT = 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
+``` <br>Starts the HTTP server on port 3000 and logs a message. |
 
 ---
 
-### Extending the Demo
+### DevOps Context
 
-If you need additional routes or middleware, simply add them before the `app.listen` call. For example:
+| Context | Role |
+|---------|------|
+| **Jenkins CI Pipeline** | The file is referenced in the Jenkins job that **polls the SCM** for changes. When Jenkins detects a commit, it runs `npm install` and `node index.js` (or a test script that starts the server) to ensure the application can start successfully. |
+| **Docker** | If the project includes a `Dockerfile`, this file is the main entry point (`CMD ["node", "index.js"]`). The container will expose port 3000, matching the `app.listen` call. |
+| **Testing** | A simple health‑check script or `curl http://localhost:3000/` can be used in the pipeline to confirm the server is up and returning the expected string. |
 
-```js
-app.get('/health', (req, res) => res.send('OK'));
+---
+
+### Typical Usage in a CI/CD Workflow
+
+1. **Build Stage** – `npm install` installs dependencies.  
+2. **Test Stage** – A lightweight test (e.g., `curl` or a unit test) hits `GET /` to verify the server responds.  
+3. **Deploy Stage** – The application is packaged into a Docker image and pushed to a registry.  
+4. **Run Stage** – The image is deployed to a staging or production environment where the same endpoint can be monitored.
+
+---
+
+#### Quick Reference
+
+```bash
+# Start locally
+node index.js
+
+# Verify
+curl http://localhost:3000/
+# => Hello from Jenkins CI Pipeline with poll SCM
 ```
 
-This will expose a `/health` endpoint that can be used for health checks.
+This file serves as a simple, reliable “Hello World” that confirms the CI/CD pipeline, Docker image, and deployment are functioning correctly.
